@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Essay Writer — liveLLM</title>
+  <style>
+    :root {
+      --bg: #08111d;
+      --bg-2: #13263a;
+      --panel: rgba(16, 31, 45, 0.95);
+      --panel-2: rgba(25, 44, 61, 0.95);
+      --accent: #67e8f9;
+      --accent-2: #fb923c;
+      --text: #f5f8fb;
+      --muted: #9cb5c7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: start center;
+      padding: 24px 16px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(103,232,249,0.14), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(251,146,60,0.12), transparent 30%),
+        linear-gradient(135deg, var(--bg), var(--bg-2));
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+    }
+
+    .shell {
+      width: min(100%, 860px);
+      background: linear-gradient(180deg, rgba(18,34,49,0.98), rgba(12,22,33,0.98));
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 28px;
+      box-shadow: 0 28px 70px rgba(0,0,0,0.45);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(90deg, var(--panel), var(--panel-2));
+    }
+
+    .topbar h1 { font-size: 1.5rem; }
+    .topbar p { color: var(--muted); font-size: 0.95rem; margin-top: 4px; }
+
+    a.back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      color: var(--text);
+      font-weight: 700;
+      transition: background 0.15s;
+    }
+    a.back-btn:hover { background: rgba(255,255,255,0.18); }
+
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 14px 20px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-panel { display: none; padding: 24px 22px; }
+    .tab-panel.active { display: block; }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 0.97rem;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+    }
+
+    select option { background: #13263a; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    button.primary {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 22px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text);
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+      transition: transform 0.15s, opacity 0.15s;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+
+    button.primary:hover { transform: translateY(-1px); }
+    button.primary:active { transform: translateY(1px); }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    button.secondary-btn {
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      padding: 10px 18px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: background 0.15s;
+    }
+    button.secondary-btn:hover { background: rgba(255,255,255,0.14); }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .output-box {
+      margin-top: 20px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 18px;
+      min-height: 120px;
+    }
+
+    .output-box h3 {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.82rem;
+    }
+
+    .output-text {
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 0.97rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .output-text.placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .spinner {
+      display: none;
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .spinner.active { display: inline-block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .copy-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .status-chip {
+      font-size: 0.82rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(103,232,249,0.12);
+      color: var(--accent);
+    }
+
+    .status-chip.error {
+      background: rgba(251,100,100,0.12);
+      color: #ff9090;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      margin: 20px 0;
+    }
+
+    @media (max-width: 600px) {
+      .field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div>
+        <h1>✍️ Essay Writer</h1>
+        <p>AI-powered essay creation and improvement.</p>
+      </div>
+      <a href="index.html" class="back-btn">🎮 Back to Snake</a>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('write', this)">📝 Write Essay</button>
+      <button class="tab-btn" onclick="switchTab('improve', this)">✨ Improve My Essay</button>
+    </div>
+
+    <!-- TAB: Write Essay -->
+    <div class="tab-panel active" id="tab-write">
+      <div class="field-row">
+        <div class="field">
+          <label for="essayTopic">Essay Topic or Prompt</label>
+          <input type="text" id="essayTopic" placeholder="e.g. The impact of social media on society" />
+        </div>
+        <div class="field">
+          <label for="essayType">Essay Type</label>
+          <select id="essayType">
+            <option value="argumentative">Argumentative</option>
+            <option value="expository">Expository</option>
+            <option value="narrative">Narrative</option>
+            <option value="descriptive">Descriptive</option>
+            <option value="compare and contrast">Compare & Contrast</option>
+            <option value="persuasive">Persuasive</option>
+            <option value="analytical">Analytical</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="essayLength">Approximate Length</label>
+          <select id="essayLength">
+            <option value="short (3 paragraphs)">Short (3 paragraphs)</option>
+            <option value="medium (5 paragraphs)" selected>Medium (5 paragraphs)</option>
+            <option value="long (7+ paragraphs)">Long (7+ paragraphs)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="essayTone">Tone</label>
+          <select id="essayTone">
+            <option value="academic">Academic</option>
+            <option value="conversational">Conversational</option>
+            <option value="formal">Formal</option>
+            <option value="creative">Creative</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="extraContext">Extra instructions (optional)</label>
+        <textarea id="extraContext" rows="2" placeholder="e.g. Include statistics, target grade 10 students, avoid jargon…"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="writeBtn" onclick="writeEssay()">Generate Essay</button>
+        <div class="spinner" id="writeSpinner"></div>
+        <span class="status-chip" id="writeStatus" style="display:none"></span>
+      </div>
+
+      <div class="output-box" id="writeOutput">
+        <h3>Generated Essay</h3>
+        <div class="output-text placeholder" id="writeOutputText">Your essay will appear here…</div>
+      </div>
+      <div class="copy-row">
+        <button class="secondary-btn" onclick="copyOutput('writeOutputText')">Copy</button>
+      </div>
+    </div>
+
+    <!-- TAB: Improve Essay -->
+    <div class="tab-panel" id="tab-improve">
+      <div class="field">
+        <label for="originalEssay">Paste your essay here</label>
+        <textarea id="originalEssay" rows="10" placeholder="Paste the essay you want to improve…"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="improveGoal">Improvement Focus</label>
+          <select id="improveGoal">
+            <option value="grammar and clarity">Grammar & Clarity</option>
+            <option value="structure and flow">Structure & Flow</option>
+            <option value="vocabulary and style">Vocabulary & Style</option>
+            <option value="argument strength">Argument Strength</option>
+            <option value="overall quality">Overall Quality</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="improveLevel">Writing Level</label>
+          <select id="improveLevel">
+            <option value="middle school">Middle School</option>
+            <option value="high school" selected>High School</option>
+            <option value="college">College</option>
+            <option value="professional">Professional</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="improveNotes">Specific feedback requests (optional)</label>
+        <textarea id="improveNotes" rows="2" placeholder="e.g. Make the conclusion stronger, add more evidence…"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="improveBtn" onclick="improveEssay()">Improve Essay</button>
+        <div class="spinner" id="improveSpinner"></div>
+        <span class="status-chip" id="improveStatus" style="display:none"></span>
+      </div>
+
+      <div class="output-box" id="improveOutput">
+        <h3>Improved Essay</h3>
+        <div class="output-text placeholder" id="improveOutputText">Your improved essay will appear here…</div>
+      </div>
+      <div class="copy-row">
+        <button class="secondary-btn" onclick="copyOutput('improveOutputText')">Copy</button>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="output-box" id="feedbackOutput">
+        <h3>What Changed</h3>
+        <div class="output-text placeholder" id="feedbackOutputText">A summary of changes will appear here…</div>
+      </div>
+      <div class="copy-row">
+        <button class="secondary-btn" onclick="copyOutput('feedbackOutputText')">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://vibe-proxy-gqv4.onrender.com/v1/chat/completions';
+    const API_KEY = 'sk-vibe-summer-2026';
+
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    async function callLLM(prompt) {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + API_KEY,
+        },
+        body: JSON.stringify({
+          model: 'class-chat-model',
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || '';
+    }
+
+    function setLoading(btnId, spinnerId, statusId, loading, errorMsg) {
+      const btn = document.getElementById(btnId);
+      const spinner = document.getElementById(spinnerId);
+      const status = document.getElementById(statusId);
+      btn.disabled = loading;
+      spinner.classList.toggle('active', loading);
+      if (errorMsg) {
+        status.textContent = errorMsg;
+        status.className = 'status-chip error';
+        status.style.display = '';
+      } else if (loading) {
+        status.textContent = 'Generating…';
+        status.className = 'status-chip';
+        status.style.display = '';
+      } else {
+        status.style.display = 'none';
+      }
+    }
+
+    async function writeEssay() {
+      const topic = document.getElementById('essayTopic').value.trim();
+      if (!topic) {
+        alert('Please enter a topic or prompt.');
+        return;
+      }
+      const type = document.getElementById('essayType').value;
+      const length = document.getElementById('essayLength').value;
+      const tone = document.getElementById('essayTone').value;
+      const extra = document.getElementById('extraContext').value.trim();
+
+      const prompt = `Write a ${tone} ${type} essay about: "${topic}".
+Length: ${length}.
+${extra ? 'Additional instructions: ' + extra : ''}
+Write only the essay itself — no meta-commentary or preamble.`;
+
+      setLoading('writeBtn', 'writeSpinner', 'writeStatus', true, null);
+      const outputEl = document.getElementById('writeOutputText');
+      outputEl.classList.remove('placeholder');
+      outputEl.textContent = '';
+
+      try {
+        const result = await callLLM(prompt);
+        outputEl.textContent = result;
+        setLoading('writeBtn', 'writeSpinner', 'writeStatus', false, null);
+      } catch (err) {
+        setLoading('writeBtn', 'writeSpinner', 'writeStatus', false, 'Error: ' + err.message);
+        outputEl.classList.add('placeholder');
+        outputEl.textContent = 'Failed to generate. Check your connection and try again.';
+      }
+    }
+
+    async function improveEssay() {
+      const original = document.getElementById('originalEssay').value.trim();
+      if (!original) {
+        alert('Please paste your essay first.');
+        return;
+      }
+      const goal = document.getElementById('improveGoal').value;
+      const level = document.getElementById('improveLevel').value;
+      const notes = document.getElementById('improveNotes').value.trim();
+
+      const prompt = `You are an expert writing coach. Improve the following essay for a ${level} student.
+Focus on: ${goal}.
+${notes ? 'Specific requests: ' + notes : ''}
+
+Reply in two clearly labelled sections:
+SECTION 1 — IMPROVED ESSAY:
+<the full rewritten essay>
+
+SECTION 2 — WHAT CHANGED:
+<a concise bulleted summary of the main improvements made>
+
+Original essay:
+---
+${original}
+---`;
+
+      setLoading('improveBtn', 'improveSpinner', 'improveStatus', true, null);
+      const improvedEl = document.getElementById('improveOutputText');
+      const feedbackEl = document.getElementById('feedbackOutputText');
+      improvedEl.classList.remove('placeholder');
+      feedbackEl.classList.remove('placeholder');
+      improvedEl.textContent = '';
+      feedbackEl.textContent = '';
+
+      try {
+        const result = await callLLM(prompt);
+
+        const sec1Match = result.match(/SECTION 1[^\n]*\n([\s\S]*?)(?=SECTION 2|$)/i);
+        const sec2Match = result.match(/SECTION 2[^\n]*\n([\s\S]*)/i);
+
+        improvedEl.textContent = sec1Match ? sec1Match[1].trim() : result;
+        feedbackEl.textContent = sec2Match ? sec2Match[1].trim() : 'See improved essay above.';
+        setLoading('improveBtn', 'improveSpinner', 'improveStatus', false, null);
+      } catch (err) {
+        setLoading('improveBtn', 'improveSpinner', 'improveStatus', false, 'Error: ' + err.message);
+        improvedEl.classList.add('placeholder');
+        feedbackEl.classList.add('placeholder');
+        improvedEl.textContent = 'Failed to generate. Check your connection and try again.';
+        feedbackEl.textContent = '';
+      }
+    }
+
+    function copyOutput(id) {
+      const text = document.getElementById(id).textContent;
+      if (!text || document.getElementById(id).classList.contains('placeholder')) return;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+      });
+    }
+  </script>
+</body>
+</html>
