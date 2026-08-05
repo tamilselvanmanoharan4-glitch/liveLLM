@@ -1,53 +1,1003 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Snake Arcade</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="app-shell">
-      <header class="top-bar">
-        <div class="score-pill">
-          <span class="label">High Score</span>
-          <span id="highScore">0</span>
-        </div>
-        <div class="score-pill">
-          <span class="label">Score</span>
-          <span id="score">0</span>
-        </div>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake Deluxe</title>
+  <style>
+    :root {
+      --bg: #08111d;
+      --bg-2: #13263a;
+      --panel: rgba(16, 31, 45, 0.95);
+      --panel-2: rgba(25, 44, 61, 0.95);
+      --accent: #67e8f9;
+      --accent-2: #fb923c;
+      --text: #f5f8fb;
+      --muted: #9cb5c7;
+      --overlay: rgba(3, 8, 15, 0.82);
+    }
 
-      <section class="controls" aria-label="Game controls">
-        <button id="rulesBtn" type="button">Rules (H)</button>
-        <button id="pauseBtn" type="button">Pause (P)</button>
-        <button id="restartBtn" type="button">Restart (R)</button>
-      </section>
+    * { box-sizing: border-box; }
 
-      <section class="game-panel">
-        <canvas id="gameCanvas" width="320" height="320"></canvas>
-        <div id="overlay" class="overlay hidden" aria-live="polite">
-          <div class="overlay-card">
-            <h1 id="overlayTitle">Paused</h1>
-            <p id="overlayMessage">Press P to continue.</p>
-            <button id="overlayRestartBtn" type="button">Restart</button>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(103, 232, 249, 0.14), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(251, 146, 60, 0.12), transparent 30%),
+        linear-gradient(135deg, var(--bg), var(--bg-2));
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+    }
+
+    .game-shell {
+      width: min(100%, 1120px);
+      background: linear-gradient(180deg, rgba(18, 34, 49, 0.98), rgba(12, 22, 33, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 28px;
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 18px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(90deg, var(--panel), var(--panel-2));
+    }
+
+    .title-block h1 {
+      margin: 0 0 4px;
+      font-size: 1.5rem;
+      letter-spacing: 0.02em;
+    }
+
+    .title-block p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .control-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.92rem;
+    }
+
+    .control-chip select {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 8px;
+      background: rgba(255, 255, 255, 0.14);
+      color: var(--text);
+      outline: none;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text);
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(1px); }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: none;
+    }
+
+    .game-area {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 20px;
+      padding: 20px;
+      align-items: start;
+    }
+
+    .board-wrap {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 22px;
+      padding: 12px;
+      display: grid;
+      place-items: center;
+    }
+
+    canvas {
+      width: min(100%, 560px);
+      height: auto;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #102538, #0d1c29);
+      border: 2px solid rgba(255, 255, 255, 0.11);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.18);
+    }
+
+    .side-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .panel-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .panel-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .panel-card p,
+    .panel-card li {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 0.95rem;
+    }
+
+    .panel-card ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .modal,
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+
+    .modal.open,
+    .overlay.open { display: flex; }
+
+    .modal-card,
+    .overlay-card {
+      background: linear-gradient(180deg, rgba(21, 37, 52, 0.98), rgba(12, 22, 33, 0.98));
+      width: min(92vw, 780px);
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+      padding: 18px;
+      max-height: 86vh;
+      overflow: auto;
+    }
+
+    .overlay-card {
+      width: min(92vw, 560px);
+      text-align: center;
+    }
+
+    .overlay-card h2,
+    .modal-card h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    .overlay-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .shop-item {
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .shop-item strong { font-size: 1rem; }
+    .shop-item small { color: var(--muted); line-height: 1.4; }
+    .shop-item .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .shop-item button {
+      padding: 8px 10px;
+      font-size: 0.9rem;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(103, 232, 249, 0.16);
+      color: #c4f6ff;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+
+    .warning { color: #ffd29d; }
+
+    @media (max-width: 960px) {
+      .game-area { grid-template-columns: 1fr; }
+      .side-panel { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .game-area { padding: 12px; }
+      .shop-grid { grid-template-columns: 1fr; }
+      .side-panel { grid-template-columns: 1fr; }
+      .controls { padding: 12px; }
+      .topbar { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-shell">
+    <div class="topbar">
+      <div class="title-block">
+        <h1>Snake Deluxe</h1>
+        <p>Collect apples, earn coins, and build a ridiculous accessory collection.</p>
+      </div>
+      <div class="stats">
+        <div class="stat-pill">High Score: <span id="highScore">0</span></div>
+        <div class="stat-pill">Score: <span id="score">0</span></div>
+        <div class="stat-pill">Coins: <span id="coins">0</span></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button data-action="rules" data-shortcut="R">Rules (R)</button>
+      <button data-action="pause" data-shortcut="P" class="secondary">Pause (P)</button>
+      <button data-action="restart" data-shortcut="Enter" class="secondary">Restart (Enter)</button>
+      <button data-action="shop" data-shortcut="O">Shop (O)</button>
+      <label class="control-chip">
+        <span>Difficulty</span>
+        <select id="difficultySelect">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="game-area">
+      <div class="board-wrap">
+        <canvas id="gameCanvas" width="420" height="420"></canvas>
+      </div>
+      <div class="side-panel">
+        <div class="panel-card">
+          <h3>How to play</h3>
+          <p>Use the arrow keys or WASD to steer. Each apple gives 3 coins and grows your score.</p>
+        </div>
+        <div class="panel-card">
+          <h3>Accessories</h3>
+          <ul>
+            <li>Buy accessories in the shop with coins.</li>
+            <li>You can equip one item in each slot at once.</li>
+            <li>Different slots can stack together at the same time.</li>
+          </ul>
+        </div>
+        <div class="panel-card">
+          <h3>Status</h3>
+          <p id="statusText">Game is live. Press P to pause, O for the shop.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay open" id="overlay">
+    <div class="overlay-card">
+      <h2 id="overlayTitle">Snake Deluxe+</h2>
+      <p id="overlayMessage">Start a run, collect apples, earn coins, and unlock accessories.</p>
+      <div class="overlay-actions">
+        <button id="overlayActionBtn" onclick="startGame()">Start Game</button>
+        <button class="secondary" onclick="openModal('rulesModal')">Open Rules</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="rulesModal">
+    <div class="modal-card">
+      <h2>Rules</h2>
+      <ul>
+        <li>Use arrow keys or WASD to move.</li>
+        <li>Eat apples to grow and gain 3 coins each.</li>
+        <li>Buy accessories in the shop and equip any combination of slots.</li>
+        <li>Press P to pause, Enter to restart, R for rules, and O for the shop.</li>
+        <li>One item per slot can be equipped at the same time.</li>
+      </ul>
+      <div style="margin-top: 12px;"><button onclick="closeModal('rulesModal')">Close</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="shopModal">
+    <div class="modal-card">
+      <h2>Accessory Shop</h2>
+      <p class="warning">Buy accessories once, then equip them from the same card. The shop has lots of gear across multiple slots.</p>
+      <div id="shopList" class="shop-grid"></div>
+      <div style="margin-top: 12px;"><button onclick="closeModal('shopModal')">Close</button></div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const cellSize = 20;
+    const cols = 21;
+    const rows = 21;
+    const targetApples = 3;
+
+    const shopItems = [
+      { id: 'crown', name: 'Crown', slot: 'hat', cost: 18, color: '#ffd166', description: 'Royal headwear for the snake king.' },
+      { id: 'beanie', name: 'Beanie', slot: 'hat', cost: 15, color: '#6a4c93', description: 'A cozy knit beanie.' },
+      { id: 'pirate', name: 'Pirate Hat', slot: 'hat', cost: 16, color: '#ff7f50', description: 'Classic pirate flair.' },
+      { id: 'halo', name: 'Halo', slot: 'hat', cost: 20, color: '#7dd3fc', description: 'A glowing halo that floats above the head.' },
+      { id: 'horns', name: 'Crystal Horns', slot: 'hat', cost: 22, color: '#c4b5fd', description: 'Sharp crystal horns.' },
+      { id: 'visor', name: 'Sun Visor', slot: 'eyes', cost: 15, color: '#f59e0b', description: 'Shades for bright runs.' },
+      { id: 'shades', name: 'Retro Shades', slot: 'eyes', cost: 18, color: '#111827', description: 'Oversized sunglasses.' },
+      { id: 'cateyes', name: 'Cat Eyes', slot: 'eyes', cost: 17, color: '#fb7185', description: 'Neon cat-eye lenses.' },
+      { id: 'mask', name: 'Bandit Mask', slot: 'face', cost: 15, color: '#cbd5e1', description: 'A sneaky face covering.' },
+      { id: 'grin', name: 'Glow Grin', slot: 'face', cost: 19, color: '#f97316', description: 'A mischievous smile.' },
+      { id: 'spark', name: 'Spark Trail', slot: 'trail', cost: 15, color: '#ff5d5d', description: 'A quick red spark trail.' },
+      { id: 'rainbow', name: 'Rainbow Trail', slot: 'trail', cost: 18, color: '#7af2a0', description: 'Bright, colorful motion streaks.' },
+      { id: 'comet', name: 'Comet Trail', slot: 'trail', cost: 17, color: '#f59e0b', description: 'A burning comet tail.' },
+      { id: 'nova', name: 'Nova Trail', slot: 'trail', cost: 20, color: '#818cf8', description: 'A cool glowing trail.' },
+      { id: 'dragon', name: 'Dragon Trail', slot: 'trail', cost: 22, color: '#34d399', description: 'A dramatic dragon ribbon.' },
+      { id: 'aura', name: 'Electric Aura', slot: 'aura', cost: 20, color: '#22d3ee', description: 'A glowing ring around the head.' },
+      { id: 'ember', name: 'Ember Aura', slot: 'aura', cost: 18, color: '#f97316', description: 'A warm fiery outline.' },
+      { id: 'wings', name: 'Pixel Wings', slot: 'back', cost: 21, color: '#e2e8f0', description: 'Tiny wings that flap behind the snake.' },
+      { id: 'jetpack', name: 'Jetpack', slot: 'back', cost: 24, color: '#94a3b8', description: 'A tiny jetpack with style.' },
+      { id: 'starbadge', name: 'Star Badge', slot: 'badge', cost: 14, color: '#fde68a', description: 'A bright badge for the body.' },
+      { id: 'skullbadge', name: 'Skull Badge', slot: 'badge', cost: 16, color: '#e5e7eb', description: 'A spooky badge with attitude.' },
+      { id: 'scarf', name: 'Neon Scarf', slot: 'body', cost: 19, color: '#f472b6', description: 'A wrapped scarf for the torso.' },
+      { id: 'collar', name: 'Gold Collar', slot: 'body', cost: 18, color: '#fbbf24', description: 'A shiny collar for the body.' },
+      { id: 'tailcharm', name: 'Tail Charm', slot: 'tail', cost: 15, color: '#a78bfa', description: 'A charm hanging from the tail.' },
+      { id: 'tailgem', name: 'Tail Gem', slot: 'tail', cost: 17, color: '#38bdf8', description: 'A bright gem on the tail.' },
+    ];
+
+    const scoreEl = document.getElementById('score');
+    const coinsEl = document.getElementById('coins');
+    const highScoreEl = document.getElementById('highScore');
+    const statusEl = document.getElementById('statusText');
+    const shopListEl = document.getElementById('shopList');
+    const difficultySelectEl = document.getElementById('difficultySelect');
+    const overlayEl = document.getElementById('overlay');
+    const overlayTitleEl = document.getElementById('overlayTitle');
+    const overlayMessageEl = document.getElementById('overlayMessage');
+    const overlayActionBtn = document.getElementById('overlayActionBtn');
+
+    const state = {
+      snake: [],
+      direction: { x: 1, y: 0 },
+      nextDirection: { x: 1, y: 0 },
+      apples: [],
+      score: 0,
+      coins: 0,
+      highScore: Number(localStorage.getItem('snake-high-score') || 0),
+      gameOver: false,
+      paused: false,
+      started: false,
+      owned: new Set(JSON.parse(localStorage.getItem('snake-owned') || '[]')),
+      equippedAccessories: JSON.parse(localStorage.getItem('snake-equipped-accessories') || '{}'),
+      trailHistory: [],
+      tickMs: 120,
+      difficulty: 'medium',
+      soundOn: true,
+    };
+
+    let loopId = null;
+    let audioCtx = null;
+
+    function init() {
+      state.difficulty = difficultySelectEl.value || 'medium';
+      hydrateEquippedAccessories();
+      applyDifficulty();
+      renderShop();
+      updateStats();
+      draw();
+      window.addEventListener('keydown', handleKeydown);
+      document.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => triggerAction(btn.dataset.action));
+      });
+      difficultySelectEl.addEventListener('change', (event) => {
+        state.difficulty = event.target.value;
+        applyDifficulty();
+        if (state.started) {
+          updateStatus(`Difficulty set to ${state.difficulty}.`);
+        }
+      });
+      updateStatus('Choose a difficulty and press Start Game.');
+    }
+
+    function hydrateEquippedAccessories() {
+      if (!state.equippedAccessories || typeof state.equippedAccessories !== 'object') {
+        state.equippedAccessories = {};
+      }
+
+      const legacyHat = localStorage.getItem('snake-hat');
+      const legacyTrail = localStorage.getItem('snake-trail');
+
+      if (legacyHat && !state.equippedAccessories.hat) {
+        state.equippedAccessories.hat = legacyHat;
+      }
+
+      if (legacyTrail && !state.equippedAccessories.trail) {
+        state.equippedAccessories.trail = legacyTrail;
+      }
+
+      localStorage.setItem('snake-equipped-accessories', JSON.stringify(state.equippedAccessories));
+    }
+
+    function applyDifficulty() {
+      const speeds = { easy: 160, medium: 120, hard: 90 };
+      state.tickMs = speeds[state.difficulty] || 120;
+      if (state.started) {
+        startLoop();
+      }
+    }
+
+    function startLoop() {
+      if (loopId) clearInterval(loopId);
+      loopId = setInterval(loop, state.tickMs);
+    }
+
+    function stopLoop() {
+      if (loopId) clearInterval(loopId);
+      loopId = null;
+    }
+
+    function startGame() {
+      state.started = true;
+      resetGame();
+      hideOverlay();
+      playSound('start');
+    }
+
+    function resetGame() {
+      state.snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 },
+      ];
+      state.direction = { x: 1, y: 0 };
+      state.nextDirection = { x: 1, y: 0 };
+      state.apples = [];
+      state.score = 0;
+      state.gameOver = false;
+      state.paused = false;
+      state.trailHistory = [];
+
+      for (let i = 0; i < targetApples; i += 1) {
+        spawnApple();
+      }
+
+      updateStats();
+      updateStatus('Game is live. Press P to pause.');
+      draw();
+      startLoop();
+    }
+
+    function spawnApple() {
+      const occupied = new Set(state.snake.map(cell => `${cell.x},${cell.y}`));
+      state.apples.forEach(apple => occupied.add(`${apple.x},${apple.y}`));
+
+      const candidates = [];
+      for (let y = 0; y < rows; y += 1) {
+        for (let x = 0; x < cols; x += 1) {
+          if (!occupied.has(`${x},${y}`)) {
+            candidates.push({ x, y });
+          }
+        }
+      }
+
+      if (candidates.length === 0) return;
+
+      const choice = candidates[Math.floor(Math.random() * candidates.length)];
+      state.apples.push(choice);
+    }
+
+    function loop() {
+      if (!state.started || state.paused || state.gameOver) return;
+
+      state.direction = state.nextDirection;
+      const head = { ...state.snake[0] };
+      head.x += state.direction.x;
+      head.y += state.direction.y;
+
+      if (head.x < 0 || head.y < 0 || head.x >= cols || head.y >= rows) {
+        endGame();
+        return;
+      }
+
+      if (state.snake.some(cell => cell.x === head.x && cell.y === head.y)) {
+        endGame();
+        return;
+      }
+
+      state.snake.unshift(head);
+      state.trailHistory.push({ x: head.x, y: head.y });
+      if (state.trailHistory.length > 28) state.trailHistory.shift();
+
+      const eatenIndex = state.apples.findIndex(apple => apple.x === head.x && apple.y === head.y);
+      if (eatenIndex >= 0) {
+        state.apples.splice(eatenIndex, 1);
+        state.score += 1;
+        state.coins += 3;
+        if (state.score > state.highScore) {
+          state.highScore = state.score;
+          localStorage.setItem('snake-high-score', String(state.highScore));
+        }
+        playSound('apple');
+
+        while (state.apples.length < targetApples) {
+          spawnApple();
+        }
+      } else {
+        state.snake.pop();
+      }
+
+      updateStats();
+      draw();
+    }
+
+    function endGame() {
+      state.gameOver = true;
+      stopLoop();
+      playSound('lose');
+      updateStatus('Game over. Press Enter or Start Game to play again.');
+      showOverlay('Game Over', 'You crashed. Start another run and chase a higher score.', 'Play Again');
+      draw();
+    }
+
+    function togglePause() {
+      if (!state.started || state.gameOver) return;
+      state.paused = !state.paused;
+      updateStatus(state.paused ? 'Paused. Press P to resume.' : 'Game resumed.');
+      draw();
+    }
+
+    function triggerAction(action) {
+      if (action === 'rules') openModal('rulesModal');
+      if (action === 'pause') togglePause();
+      if (action === 'restart') {
+        if (!state.started || state.gameOver) {
+          startGame();
+        } else {
+          resetGame();
+        }
+      }
+      if (action === 'shop') openModal('shopModal');
+    }
+
+    function handleKeydown(e) {
+      const key = e.key.toLowerCase();
+      if (e.altKey) return;
+
+      if (['arrowup', 'w'].includes(key)) {
+        e.preventDefault();
+        if (state.direction.y !== 1) state.nextDirection = { x: 0, y: -1 };
+      } else if (['arrowdown', 's'].includes(key)) {
+        e.preventDefault();
+        if (state.direction.y !== -1) state.nextDirection = { x: 0, y: 1 };
+      } else if (['arrowleft', 'a'].includes(key)) {
+        e.preventDefault();
+        if (state.direction.x !== 1) state.nextDirection = { x: -1, y: 0 };
+      } else if (['arrowright', 'd'].includes(key)) {
+        e.preventDefault();
+        if (state.direction.x !== -1) state.nextDirection = { x: 1, y: 0 };
+      } else if (key === 'p') {
+        e.preventDefault();
+        togglePause();
+      } else if (key === 'r') {
+        e.preventDefault();
+        openModal('rulesModal');
+      } else if (key === 'o') {
+        e.preventDefault();
+        openModal('shopModal');
+      } else if (key === 'enter' || key === ' ') {
+        e.preventDefault();
+        if (!state.started || state.gameOver) {
+          startGame();
+        } else {
+          resetGame();
+        }
+      } else if (key === 'escape') {
+        closeModal('rulesModal');
+        closeModal('shopModal');
+      }
+    }
+
+    function updateStats() {
+      scoreEl.textContent = state.score;
+      coinsEl.textContent = state.coins;
+      highScoreEl.textContent = state.highScore;
+    }
+
+    function updateStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function getEquippedItem(slot) {
+      const itemId = state.equippedAccessories[slot];
+      return itemId ? shopItems.find(item => item.id === itemId) || null : null;
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= canvas.width; x += cellSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= canvas.height; y += cellSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawSnake() {
+      state.snake.forEach((segment, index) => {
+        const x = segment.x * cellSize + 1;
+        const y = segment.y * cellSize + 1;
+        ctx.fillStyle = index === 0 ? '#35d071' : '#7af2a0';
+        ctx.fillRect(x, y, cellSize - 2, cellSize - 2);
+      });
+    }
+
+    function drawApples() {
+      state.apples.forEach(apple => {
+        const x = apple.x * cellSize + cellSize / 2;
+        const y = apple.y * cellSize + cellSize / 2;
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize * 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff5d5d';
+        ctx.fill();
+      });
+    }
+
+    function drawAccessories() {
+      const head = state.snake[0];
+      const second = state.snake[1];
+      const midSegment = state.snake[Math.min(3, state.snake.length - 1)];
+      const tail = state.snake[state.snake.length - 1];
+
+      if (state.trailHistory.length > 1) {
+        const trailItem = getEquippedItem('trail');
+        if (trailItem) {
+          ctx.save();
+          ctx.strokeStyle = trailItem.color;
+          ctx.lineWidth = 4;
+          ctx.lineCap = 'round';
+          ctx.shadowColor = trailItem.color;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          state.trailHistory.forEach((segment, index) => {
+            const x = segment.x * cellSize + cellSize / 2;
+            const y = segment.y * cellSize + cellSize / 2;
+            if (index === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      if (!head) return;
+
+      const x = head.x * cellSize + cellSize / 2;
+      const y = head.y * cellSize + cellSize / 2;
+
+      const auraItem = getEquippedItem('aura');
+      if (auraItem) {
+        ctx.save();
+        ctx.strokeStyle = auraItem.color;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = auraItem.color;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize * 0.46, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const hatItem = getEquippedItem('hat');
+      if (hatItem) {
+        const bob = Math.sin(Date.now() / 220) * 2;
+        ctx.save();
+        ctx.fillStyle = hatItem.color;
+        ctx.beginPath();
+        ctx.arc(x, y - cellSize * 0.42 + bob, cellSize * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(x - cellSize * 0.28, y - cellSize * 0.42 + bob + 4, cellSize * 0.56, cellSize * 0.12);
+        ctx.restore();
+      }
+
+      const eyesItem = getEquippedItem('eyes');
+      if (eyesItem) {
+        ctx.save();
+        ctx.fillStyle = eyesItem.color;
+        ctx.beginPath();
+        ctx.arc(x - 5, y - 3, 2.5, 0, Math.PI * 2);
+        ctx.arc(x + 5, y - 3, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      const faceItem = getEquippedItem('face');
+      if (faceItem) {
+        ctx.save();
+        ctx.strokeStyle = faceItem.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y + 5, 6, 0.1 * Math.PI, 0.9 * Math.PI);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const backItem = getEquippedItem('back');
+      if (backItem && second) {
+        const sx = second.x * cellSize + cellSize / 2;
+        const sy = second.y * cellSize + cellSize / 2;
+        ctx.save();
+        ctx.fillStyle = backItem.color;
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(sx - 4, sy - 6);
+        ctx.lineTo(sx - 18, sy - 16);
+        ctx.lineTo(sx - 12, sy + 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(sx + 4, sy - 6);
+        ctx.lineTo(sx + 18, sy - 16);
+        ctx.lineTo(sx + 12, sy + 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      const bodyItem = getEquippedItem('body');
+      if (bodyItem && second) {
+        const sx = second.x * cellSize + cellSize / 2;
+        const sy = second.y * cellSize + cellSize / 2;
+        ctx.save();
+        ctx.fillStyle = bodyItem.color;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(sx - 8, sy - 4, 16, 8);
+        ctx.restore();
+      }
+
+      const badgeItem = getEquippedItem('badge');
+      if (badgeItem && midSegment) {
+        const bx = midSegment.x * cellSize + cellSize / 2;
+        const by = midSegment.y * cellSize + cellSize / 2;
+        ctx.save();
+        ctx.fillStyle = badgeItem.color;
+        ctx.beginPath();
+        ctx.moveTo(bx, by - 6);
+        ctx.lineTo(bx + 4, by - 1);
+        ctx.lineTo(bx + 10, by);
+        ctx.lineTo(bx + 4, by + 3);
+        ctx.lineTo(bx + 6, by + 9);
+        ctx.lineTo(bx, by + 6);
+        ctx.lineTo(bx - 6, by + 9);
+        ctx.lineTo(bx - 4, by + 3);
+        ctx.lineTo(bx - 10, by);
+        ctx.lineTo(bx - 4, by - 1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      const tailItem = getEquippedItem('tail');
+      if (tailItem && tail) {
+        const tx = tail.x * cellSize + cellSize / 2;
+        const ty = tail.y * cellSize + cellSize / 2;
+        ctx.save();
+        ctx.fillStyle = tailItem.color;
+        ctx.beginPath();
+        ctx.arc(tx, ty, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawOverlayStates() {
+      if (!state.started) {
+        ctx.fillStyle = 'rgba(0,0,0,0.42)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px Trebuchet MS';
+        ctx.textAlign = 'center';
+        ctx.fillText('Press Start', canvas.width / 2, canvas.height / 2 - 8);
+      }
+
+      if (state.gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 26px Trebuchet MS';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2 - 8);
+        ctx.font = '16px Trebuchet MS';
+        ctx.fillText('Press Enter to play again', canvas.width / 2, canvas.height / 2 + 20);
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0e2233';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+      drawApples();
+      drawSnake();
+      drawAccessories();
+      drawOverlayStates();
+    }
+
+    function showOverlay(title, message, buttonLabel) {
+      overlayTitleEl.textContent = title;
+      overlayMessageEl.textContent = message;
+      overlayActionBtn.textContent = buttonLabel;
+      overlayEl.classList.add('open');
+    }
+
+    function hideOverlay() {
+      overlayEl.classList.remove('open');
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    function renderShop() {
+      shopListEl.innerHTML = '';
+      shopItems.forEach(item => {
+        const owned = state.owned.has(item.id);
+        const equipped = state.equippedAccessories[item.slot] === item.id;
+        const card = document.createElement('div');
+        card.className = 'shop-item';
+        card.innerHTML = `
+          <strong>${item.name}</strong>
+          <small>${item.description}</small>
+          <div class="actions">
+            <span class="pill">${item.slot.toUpperCase()} · ${owned ? 'Owned' : `${item.cost} coins`}</span>
+            <button onclick="buyOrEquip('${item.id}')">${equipped ? 'Equipped' : owned ? 'Equip' : 'Buy'}</button>
           </div>
-        </div>
-      </section>
+        `;
+        shopListEl.appendChild(card);
+      });
+    }
 
-      <section id="rulesPanel" class="rules-panel hidden" aria-label="Game rules">
-        <h2>How to play</h2>
-        <ul>
-          <li>Use the arrow keys to move.</li>
-          <li>Eat apples to grow and increase your score.</li>
-          <li>There are 3 apples on the board at once.</li>
-          <li>Do not hit the wall or your own tail.</li>
-          <li>Press H for rules, P to pause, and R to restart.</li>
-        </ul>
-      </section>
-    </main>
+    function buyOrEquip(id) {
+      const item = shopItems.find(entry => entry.id === id);
+      if (!item) return;
 
-    <script src="script.js"></script>
-  </body>
+      if (!state.owned.has(id)) {
+        if (state.coins < item.cost) {
+          updateStatus('Not enough coins for that accessory.');
+          return;
+        }
+        state.coins -= item.cost;
+        state.owned.add(id);
+        localStorage.setItem('snake-owned', JSON.stringify([...state.owned]));
+      }
+
+      state.equippedAccessories[item.slot] = state.equippedAccessories[item.slot] === id ? '' : id;
+      localStorage.setItem('snake-equipped-accessories', JSON.stringify(state.equippedAccessories));
+      updateStats();
+      updateStatus(`${item.name} ${state.equippedAccessories[item.slot] === id ? 'equipped' : 'unequipped'}.`);
+      renderShop();
+      draw();
+    }
+
+    function playSound(kind) {
+      if (!state.soundOn) return;
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      const now = audioCtx.currentTime;
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      if (kind === 'apple') {
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(880, now);
+        oscillator.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+        gainNode.gain.setValueAtTime(0.04, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      } else if (kind === 'lose') {
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(220, now);
+        oscillator.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+        gainNode.gain.setValueAtTime(0.05, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      } else {
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(700, now);
+        oscillator.frequency.exponentialRampToValueAtTime(900, now + 0.06);
+        gainNode.gain.setValueAtTime(0.03, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      }
+
+      oscillator.start(now);
+      oscillator.stop(now + 0.25);
+    }
+
+    init();
+  </script>
+</body>
 </html>
